@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -14,7 +14,7 @@ def _slugify(value: str, fallback: str) -> str:
 
 def save_image_and_metadata(image, output_dir: Path, *, mode: str, prompt: str, metadata: dict):
     output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     slug = _slugify(prompt, mode)
     suffix = uuid.uuid4().hex[:8]
     image_path = output_dir / f"{timestamp}-{mode}-{slug}-{suffix}.png"
