@@ -107,6 +107,13 @@ class ModelManager:
             return self._img2img
 
         if self._loaded_model_family == "zimage":
+            # Z-Image img2img uses a separate pipeline class. Drop the txt2img
+            # pipeline first so we do not keep two full 6B-class pipelines on
+            # the GPU at once during iterative edit workflows.
+            self._txt2img = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             try:
                 from diffusers import ZImageImg2ImgPipeline
             except ImportError as exc:
@@ -175,6 +182,8 @@ class ModelManager:
         prompt: str,
         negative_prompt: str,
         image,
+        width: int,
+        height: int,
         steps: int,
         guidance_scale: float,
         strength: float,
@@ -189,6 +198,8 @@ class ModelManager:
                 prompt=prompt,
                 negative_prompt=negative_prompt,
                 image=image,
+                width=width,
+                height=height,
                 num_inference_steps=steps,
                 guidance_scale=guidance_scale,
                 strength=strength,

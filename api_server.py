@@ -125,6 +125,8 @@ def _generate(payload: GenerateRequest) -> GenerateResponse:
             prompt=payload.prompt,
             negative_prompt=payload.negative_prompt,
             image=init_image,
+            width=payload.width,
+            height=payload.height,
             steps=payload.steps,
             guidance_scale=payload.guidance_scale,
             strength=payload.strength,
