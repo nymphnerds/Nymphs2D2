@@ -66,6 +66,8 @@ def _normalize_request(payload: GenerateRequest) -> GenerateRequest:
         raise ValueError("steps must be greater than zero.")
     if payload.mode == "img2img" and not payload.image:
         raise ValueError("img2img mode requires an input image.")
+    if payload.mode == "img2img" and not MODEL_MANAGER.supports_img2img(payload.model_id):
+        raise ValueError("Current runtime supports txt2img only.")
     if not 0.0 < strength <= 1.0:
         raise ValueError("strength must be between 0 and 1.")
 
@@ -148,6 +150,7 @@ def _generate(payload: GenerateRequest) -> GenerateResponse:
         "backend": "Nymphs2D2",
         "version": VERSION,
         "worker_id": WORKER_ID,
+        "runtime": MODEL_MANAGER.loaded_runtime or SETTINGS.runtime,
         "mode": payload.mode,
         "model_id": model_id,
         "prompt": payload.prompt,
@@ -197,6 +200,7 @@ async def health_check():
 
 @app.get("/server_info", response_model=ServerInfoResponse, tags=["status"])
 async def server_info():
+    supported_modes = MODEL_MANAGER.supported_modes()
     return ServerInfoResponse(
         backend="Nymphs2D2",
         version=VERSION,
@@ -206,10 +210,15 @@ async def server_info():
         device=SETTINGS.device,
         dtype=SETTINGS.dtype,
         output_dir=str(SETTINGS.output_dir),
-        supported_modes=["txt2img", "img2img"],
+        supported_modes=supported_modes,
         extra={
             "max_width": SETTINGS.max_width,
             "max_height": SETTINGS.max_height,
+            "runtime": MODEL_MANAGER.loaded_runtime or SETTINGS.runtime,
+            "configured_runtime": SETTINGS.runtime,
+            "nunchaku_rank": SETTINGS.nunchaku_rank,
+            "nunchaku_precision": SETTINGS.nunchaku_precision,
+            **MODEL_MANAGER.loaded_runtime_extra,
         },
     )
 

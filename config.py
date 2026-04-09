@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 DEFAULT_MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
+DEFAULT_RUNTIME = "standard"
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -27,6 +28,13 @@ def _default_device() -> str:
 
 def _normalize_model_id(model_id: str | None) -> str:
     return (model_id or DEFAULT_MODEL_ID).strip()
+
+
+def _normalize_runtime(runtime: str | None) -> str:
+    normalized = (runtime or DEFAULT_RUNTIME).strip().lower()
+    if normalized == "nunchaku":
+        return "nunchaku"
+    return "standard"
 
 
 def _is_zimage_model(model_id: str | None) -> bool:
@@ -76,10 +84,14 @@ class Settings:
     host: str
     port: int
     default_model_id: str
+    runtime: str
     default_negative_prompt: str
     device: str
     dtype: str
     variant: str | None
+    nunchaku_rank: int
+    nunchaku_precision: str
+    nunchaku_model_repo: str
     use_safetensors: bool
     hf_cache_dir: Path | None
     hf_token: str | None
@@ -99,6 +111,7 @@ def get_settings() -> Settings:
     hf_cache_raw = os.getenv("NYMPHS3D_HF_CACHE_DIR")
     hf_cache_dir = Path(hf_cache_raw).expanduser() if hf_cache_raw else None
     default_model_id = os.getenv("NYMPHS2D2_MODEL_ID", DEFAULT_MODEL_ID)
+    runtime = _normalize_runtime(os.getenv("NYMPHS2D2_RUNTIME", DEFAULT_RUNTIME))
 
     return Settings(
         root_dir=root_dir,
@@ -106,10 +119,14 @@ def get_settings() -> Settings:
         host=os.getenv("NYMPHS2D2_HOST", "0.0.0.0"),
         port=int(os.getenv("NYMPHS2D2_PORT", "8090")),
         default_model_id=default_model_id,
+        runtime=runtime,
         default_negative_prompt=os.getenv("NYMPHS2D2_DEFAULT_NEGATIVE_PROMPT", ""),
         device=os.getenv("NYMPHS2D2_DEVICE", _default_device()),
         dtype=os.getenv("NYMPHS2D2_DTYPE", _default_dtype_for_model(default_model_id)),
         variant=os.getenv("NYMPHS2D2_MODEL_VARIANT") or _default_variant_for_model(default_model_id),
+        nunchaku_rank=int(os.getenv("NYMPHS2D2_NUNCHAKU_RANK", "32")),
+        nunchaku_precision=(os.getenv("NYMPHS2D2_NUNCHAKU_PRECISION", "auto") or "auto").strip().lower(),
+        nunchaku_model_repo=os.getenv("NYMPHS2D2_NUNCHAKU_MODEL_REPO", "nunchaku-ai/nunchaku-z-image-turbo"),
         use_safetensors=_env_bool("NYMPHS2D2_USE_SAFETENSORS", True),
         hf_cache_dir=hf_cache_dir,
         hf_token=os.getenv("NYMPHS3D_HF_TOKEN") or None,
