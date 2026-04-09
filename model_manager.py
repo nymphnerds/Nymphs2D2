@@ -4,7 +4,6 @@ import gc
 from threading import RLock
 
 import torch
-from diffusers import AutoPipelineForImage2Image, AutoPipelineForText2Image
 
 from config import Settings
 
@@ -19,10 +18,17 @@ class ModelManager:
         self._dtype = self._resolve_torch_dtype(settings.dtype)
         if settings.device == "cpu" and self._dtype != torch.float32:
             self._dtype = torch.float32
+        self._loaded_model_family = None
 
     @property
     def loaded_model_id(self) -> str | None:
         return self._loaded_model_id
+
+    def _model_family(self, model_id: str | None) -> str:
+        normalized = (model_id or self.settings.default_model_id or "").strip().lower()
+        if "z-image" in normalized:
+            return "zimage"
+        return "generic"
 
     def _resolve_torch_dtype(self, dtype_name: str):
         mapping = {
@@ -35,11 +41,14 @@ class ModelManager:
         }
         return mapping.get(dtype_name.lower(), torch.float16)
 
-    def _pipeline_kwargs(self) -> dict:
+    def _pipeline_kwargs(self, model_id: str | None) -> dict:
+        model_family = self._model_family(model_id)
         kwargs = {
             "torch_dtype": self._dtype,
         }
-        if self.settings.variant:
+        if model_family == "zimage":
+            kwargs["low_cpu_mem_usage"] = False
+        elif self.settings.variant:
             kwargs["variant"] = self.settings.variant
         if self.settings.hf_cache_dir:
             kwargs["cache_dir"] = str(self.settings.hf_cache_dir)
@@ -60,9 +69,25 @@ class ModelManager:
         self._txt2img = None
         self._img2img = None
         self._loaded_model_id = None
+        self._loaded_model_family = None
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    def _load_txt2img_pipeline(self, model_id: str):
+        if self._model_family(model_id) == "zimage":
+            try:
+                from diffusers import ZImagePipeline
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Current diffusers build does not include Z-Image support. "
+                    "Install a newer diffusers build before loading Tongyi-MAI/Z-Image models."
+                ) from exc
+            return ZImagePipeline.from_pretrained(model_id, **self._pipeline_kwargs(model_id))
+
+        from diffusers import AutoPipelineForText2Image
+
+        return AutoPipelineForText2Image.from_pretrained(model_id, **self._pipeline_kwargs(model_id))
 
     def ensure_model(self, requested_model_id: str | None = None) -> str:
         model_id = requested_model_id or self.settings.default_model_id
@@ -71,14 +96,32 @@ class ModelManager:
                 return model_id
 
             self._unload_pipelines()
-            self._txt2img = AutoPipelineForText2Image.from_pretrained(model_id, **self._pipeline_kwargs())
+            self._txt2img = self._load_txt2img_pipeline(model_id)
             self._txt2img = self._prepare_pipeline(self._txt2img)
             self._loaded_model_id = model_id
+            self._loaded_model_family = self._model_family(model_id)
             return model_id
 
     def _ensure_img2img(self):
         if self._img2img is not None:
             return self._img2img
+
+        if self._loaded_model_family == "zimage":
+            try:
+                from diffusers import ZImageImg2ImgPipeline
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Current diffusers build does not include Z-Image img2img support. "
+                    "Install a newer diffusers build before using Tongyi-MAI/Z-Image models."
+                ) from exc
+            self._img2img = ZImageImg2ImgPipeline.from_pretrained(
+                self._loaded_model_id,
+                **self._pipeline_kwargs(self._loaded_model_id),
+            )
+            self._img2img = self._prepare_pipeline(self._img2img)
+            return self._img2img
+
+        from diffusers import AutoPipelineForImage2Image
 
         try:
             self._img2img = AutoPipelineForImage2Image.from_pipe(self._txt2img)
@@ -86,7 +129,7 @@ class ModelManager:
         except AttributeError:
             self._img2img = AutoPipelineForImage2Image.from_pretrained(
                 self._loaded_model_id,
-                **self._pipeline_kwargs(),
+                **self._pipeline_kwargs(self._loaded_model_id),
             )
             self._img2img = self._prepare_pipeline(self._img2img)
         return self._img2img

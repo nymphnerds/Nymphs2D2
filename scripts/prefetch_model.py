@@ -28,9 +28,19 @@ SDXL_FP16_CORE_PATTERNS = [
     "vae/diffusion_pytorch_model.fp16.safetensors",
 ]
 
+ZIMAGE_CORE_PATTERNS = [
+    "model_index.json",
+    "scheduler/*",
+    "text_encoder/*",
+    "tokenizer/*",
+    "transformer/*",
+    "vae/*",
+]
+
 PROFILE_PATTERNS = {
     "sdxl-fp16-core": SDXL_FP16_CORE_PATTERNS,
     "playground-sdxl-fp16": SDXL_FP16_CORE_PATTERNS,
+    "zimage-core": ZIMAGE_CORE_PATTERNS,
 }
 
 
@@ -40,6 +50,9 @@ def _default_profile(model_id: str, variant: str | None) -> str:
 
     if normalized_model_id == "playgroundai/playground-v2.5-1024px-aesthetic":
         return "playground-sdxl-fp16"
+
+    if "tongyi-mai/z-image" in normalized_model_id:
+        return "zimage-core"
 
     if normalized_variant in {"fp16", "float16"} and "xl" in normalized_model_id:
         return "sdxl-fp16-core"

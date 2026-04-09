@@ -47,10 +47,10 @@ Supported environment variables:
 
 Useful starting values:
 
-- `NYMPHS2D2_MODEL_ID=playgroundai/playground-v2.5-1024px-aesthetic`
+- `NYMPHS2D2_MODEL_ID=Tongyi-MAI/Z-Image-Turbo`
 - `NYMPHS2D2_DEVICE=cuda`
-- `NYMPHS2D2_DTYPE=float16`
-- `NYMPHS2D2_MODEL_VARIANT=fp16`
+- `NYMPHS2D2_DTYPE=bfloat16`
+- `NYMPHS2D2_MODEL_VARIANT=` (blank)
 - `HF_HUB_DISABLE_XET=1`
 
 ## Installation
@@ -66,6 +66,10 @@ pip install -r requirements.lock.txt
 ```
 
 The repo intentionally does not pin `torch` directly because the correct wheel depends on the target CUDA/runtime environment.
+
+Important note:
+
+- the current remake branch uses the latest `diffusers` source build because `Z-Image` support is not present in the older `0.35.1` build that was previously installed in this repo
 
 ## Run
 
@@ -83,7 +87,7 @@ source .venv/bin/activate
 python scripts/prefetch_model.py
 ```
 
-With the current default config, that resolves to the Playground model and uses a filtered SDXL fp16 profile. The script forces `HF_HUB_DISABLE_XET=1` unless `--allow-xet` is passed, because that matched the most reliable real-world download behavior on this machine.
+With the current default config, that resolves to `Tongyi-MAI/Z-Image-Turbo` and uses a filtered Z-Image profile. The script forces `HF_HUB_DISABLE_XET=1` unless `--allow-xet` is passed, because that matched the most reliable real-world download behavior on this machine.
 
 Useful examples:
 
@@ -114,8 +118,8 @@ Example request:
   "prompt": "painted fantasy goblin adventurer, full body, neutral pose, plain background",
   "width": 1024,
   "height": 1024,
-  "steps": 30,
-  "guidance_scale": 3.0,
+  "steps": 9,
+  "guidance_scale": 0.0,
   "seed": 12345
 }
 ```
@@ -127,7 +131,7 @@ Example response:
   "status": "ok",
   "worker_id": "abc123",
   "mode": "txt2img",
-  "model_id": "playgroundai/playground-v2.5-1024px-aesthetic",
+  "model_id": "Tongyi-MAI/Z-Image-Turbo",
   "output_path": "/home/nymphs3d/Nymphs2D2/outputs/20260408-230000-txt2img-painted-fantasy-1a2b3c4d.png",
   "metadata_path": "/home/nymphs3d/Nymphs2D2/outputs/20260408-230000-txt2img-painted-fantasy-1a2b3c4d.json"
 }
