@@ -111,7 +111,7 @@ def get_settings() -> Settings:
     hf_cache_raw = os.getenv("NYMPHS3D_HF_CACHE_DIR")
     hf_cache_dir = Path(hf_cache_raw).expanduser() if hf_cache_raw else None
     default_model_id = os.getenv("NYMPHS2D2_MODEL_ID", DEFAULT_MODEL_ID)
-    runtime = _normalize_runtime(os.getenv("NYMPHS2D2_RUNTIME", DEFAULT_RUNTIME))
+    runtime = _normalize_runtime(os.getenv("Z_IMAGE_RUNTIME") or os.getenv("NYMPHS2D2_RUNTIME") or DEFAULT_RUNTIME))
 
     return Settings(
         root_dir=root_dir,
