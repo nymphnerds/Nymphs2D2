@@ -7,6 +7,6 @@ fastapi==0.116.1
 huggingface-hub==0.34.4
 Pillow==11.3.0
 pydantic==2.11.7
-safetensors==0.6.2
+safetensors>=0.7.0
 transformers==4.55.4
 uvicorn==0.35.0
