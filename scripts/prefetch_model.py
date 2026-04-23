@@ -144,6 +144,40 @@ def _format_patterns(patterns: list[str] | None) -> str:
     return ", ".join(patterns)
 
 
+def _component_summary(patterns: list[str] | None) -> str | None:
+    if not patterns:
+        return None
+
+    labels: list[str] = []
+    for pattern in patterns:
+        top_level = pattern.split("/", 1)[0].strip()
+        if top_level == "model_index.json":
+            label = "model index"
+        elif top_level == "scheduler":
+            label = "scheduler"
+        elif top_level == "text_encoder":
+            label = "text encoder"
+        elif top_level == "text_encoder_2":
+            label = "text encoder 2"
+        elif top_level == "tokenizer":
+            label = "tokenizer"
+        elif top_level == "tokenizer_2":
+            label = "tokenizer 2"
+        elif top_level == "transformer":
+            label = "transformer"
+        elif top_level == "unet":
+            label = "unet"
+        elif top_level == "vae":
+            label = "vae"
+        else:
+            label = top_level.replace("_", " ")
+
+        if label not in labels:
+            labels.append(label)
+
+    return ", ".join(labels)
+
+
 def _is_zimage_turbo(model_id: str) -> bool:
     return (model_id or "").strip().lower().endswith("/z-image-turbo")
 
@@ -200,6 +234,9 @@ def main() -> int:
     print(f"revision={args.revision or 'main'}")
     print(f"profile={profile}")
     print(f"patterns={_format_patterns(allow_patterns)}")
+    component_summary = _component_summary(allow_patterns)
+    if component_summary:
+        print(f"components={component_summary}")
     print(f"cache_dir={cache_dir or 'default HF cache'}")
     print(f"local_files_only={args.local_files_only}")
     print(f"dry_run={args.dry_run}")
